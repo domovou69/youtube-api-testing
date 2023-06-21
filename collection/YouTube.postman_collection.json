@@ -1,0 +1,1086 @@
+{
+  "info": {
+    "_postman_id": "07d9d03b-d4a7-4dfb-a54b-3ddd653ee264",
+    "name": "YouTube",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Search public videos",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Validate response data\", function () {",
+              "    // Note: ",
+              "    // /^[\\w\\-]+$/ ensures that a string consists of only alphanumeric characters or hyphens and does not contain any other special characters or whitespace.",
+              "    // ^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$, which represents the format YYYY-MM-DDTHH:MM:SSZ. It ensures that the value is in the correct date format with a time and timezone in UTC.",
+              "    const responseData = pm.response.json();",
+              "",
+              "    // Assert the top-level properties",
+              "    pm.expect(responseData).to.have.property(\"kind\").and.to.eql(\"youtube#searchListResponse\");",
+              "    pm.expect(responseData).to.have.property(\"etag\").and.to.be.a(\"string\").and.to.match(/^[\\w\\-]+$/);",
+              "    pm.expect(responseData).to.have.property(\"items\").and.to.be.an(\"array\");",
+              "    pm.expect(responseData).to.have.property(\"pageInfo\").and.to.be.an(\"object\");",
+              "",
+              "    // Assert the pageInfo object",
+              "    const pageInfo = responseData.pageInfo;",
+              "    pm.expect(pageInfo).to.be.an(\"object\");",
+              "    pm.expect(pageInfo).to.have.property(\"totalResults\").and.to.be.a(\"number\");",
+              "    pm.expect(pageInfo).to.have.property(\"resultsPerPage\").and.to.be.a(\"number\");",
+              "",
+              "    // Assert the items array",
+              "    const items = responseData.items;",
+              "    for (const item of items) {",
+              "        pm.expect(item).to.have.property(\"kind\").and.to.eql(\"youtube#searchResult\");",
+              "        pm.expect(item).to.have.property(\"etag\").and.to.be.a(\"string\").and.to.match(/^[\\w\\-]+$/);",
+              "        pm.expect(item).to.have.property(\"id\").to.be.an(\"object\");",
+              "        const id = item.id;",
+              "        pm.expect(id).to.be.an(\"object\");",
+              "        pm.expect(id).to.have.property(\"kind\").and.to.eql(\"youtube#video\");",
+              "        pm.expect(id).to.have.property(\"videoId\").and.to.match(/^[\\w\\-]+$/);",
+              "",
+              "        // Assert the snippet object",
+              "        const snippet = item.snippet;",
+              "        pm.expect(snippet).to.be.an(\"object\");",
+              "        pm.expect(snippet).to.have.property(\"publishedAt\").and.to.be.a(\"string\").and.to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$/);",
+              "        pm.expect(snippet).to.have.property(\"channelId\").and.to.be.a(\"string\").to.match(/^[\\w\\-]+$/);",
+              "        pm.expect(snippet).to.have.property(\"title\").and.to.be.a(\"string\");",
+              "        pm.expect(snippet).to.have.property(\"description\").and.to.be.a(\"string\");",
+              "        pm.expect(snippet).to.have.property(\"thumbnails\").and.to.be.an(\"object\");",
+              "        pm.expect(snippet.thumbnails).to.have.keys([\"default\", \"medium\", \"high\"]);",
+              "",
+              "        const thumbnails = snippet.thumbnails;",
+              "",
+              "        for (const key in thumbnails) {",
+              "            if (thumbnails.hasOwnProperty(key)) {",
+              "                const thumbnail = thumbnails[key];",
+              "",
+              "                pm.test(`Test '${key}' thumbnail`, function () {",
+              "                    // Note:",
+              "                    // '^https?:\\/\\/': match: \"http://\" or \"https://\" at the begining",
+              "                    // '[^\\s/$.?#]': match any character except whitespace, \"/\", \"$\", \".\", \"?\", and \"#\"",
+              "                    // '.[^\\s]*$': match any character except whitespace, zero or more times, until the end of the string",
+              "                    pm.expect(thumbnail).to.have.property(\"url\").that.matches(/^https?:\\/\\/[^\\s/$.?#].[^\\s]*$/);",
+              "                    pm.expect(thumbnail).to.have.property(\"width\").to.be.oneOf([120,320,480]);",
+              "                    pm.expect(thumbnail).to.have.property(\"height\").to.be.oneOf([90,180,360]);",
+              "                });",
+              "            }",
+              "        }",
+              "",
+              "        pm.expect(snippet).to.have.property(\"channelTitle\").and.to.be.a(\"string\"); // no special rules",
+              "        pm.expect(snippet).to.have.property(\"liveBroadcastContent\").to.be.oneOf([\"upcoming\", \"live\", \"none\"]);",
+              "        pm.expect(snippet).to.have.property(\"publishTime\").and.to.be.a(\"string\").and.to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$/);",
+              "    }",
+              "});",
+              "",
+              "pm.environment.set(\"foundedVideoId\", pm.response.json().items[0].id.videoId);",
+              "pm.environment.set(\"foundedChannelId\", pm.response.json().items[0].snippet.channelId);",
+              "pm.environment.set(\"foundedVideoTitle\", pm.response.json().items[0].snippet.title);",
+              "",
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{bearerToken}}",
+            "type": "default"
+          }
+        ],
+        "url": {
+          "raw": "https://www.googleapis.com/youtube/v3/search?part=snippet&q=Public video test 1&type=video",
+          "protocol": "https",
+          "host": ["www", "googleapis", "com"],
+          "path": ["youtube", "v3", "search"],
+          "query": [
+            {
+              "key": "part",
+              "value": "snippet"
+            },
+            {
+              "key": "q",
+              "value": "Public video test 1"
+            },
+            {
+              "key": "key",
+              "value": "{{key}}",
+              "disabled": true
+            },
+            {
+              "key": "type",
+              "value": "video"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Validate video data",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Validate response data\", function () {",
+              "    // Note: ",
+              "    // /^[\\w\\-]+$/ ensures that a string consists of only alphanumeric characters or hyphens and does not contain any other special characters or whitespace.",
+              "    const responseData = pm.response.json();",
+              "",
+              "    // Assert the top-level properties",
+              "    pm.expect(responseData).to.have.property(\"kind\").and.to.eql(\"youtube#videoListResponse\");",
+              "    pm.expect(responseData).to.have.property(\"etag\").and.to.be.a(\"string\").and.to.match(/^[\\w\\-]+$/);",
+              "    pm.expect(responseData).to.have.property(\"items\").and.to.be.an(\"array\");",
+              "    pm.expect(responseData).to.have.property(\"pageInfo\").and.to.be.an(\"object\");",
+              "",
+              "    // Assert the items array",
+              "    const items = responseData.items;",
+              "    for (const item of items) {",
+              "        pm.expect(item).to.have.property(\"kind\").and.to.eql(\"youtube#video\");",
+              "        pm.expect(item).to.have.property(\"etag\").and.to.be.a(\"string\").and.to.match(/^[\\w\\-]+$/);",
+              "        pm.expect(item).to.have.property(\"id\").and.to.be.a(\"string\").and.to.match(/^[\\w\\-]+$/);",
+              "",
+              "        // Assert the snippet object",
+              "        const snippet = item.snippet;",
+              "        if (snippet) {",
+              "            pm.expect(snippet).to.be.an(\"object\");",
+              "            pm.expect(snippet).to.have.property(\"publishedAt\").and.to.be.a(\"string\").and.to.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$/);",
+              "            pm.expect(snippet).to.have.property(\"channelId\").and.to.be.a(\"string\").to.match(/^[\\w\\-]+$/);",
+              "            pm.expect(snippet).to.have.property(\"title\").and.to.be.a(\"string\");",
+              "            pm.expect(snippet).to.have.property(\"description\").and.to.be.a(\"string\");",
+              "            pm.expect(snippet).to.have.property(\"thumbnails\").and.to.be.an(\"object\");",
+              "            pm.expect(snippet.thumbnails).to.have.keys([\"default\", \"medium\", \"high\", \"standard\", \"maxres\"]);",
+              "",
+              "            const thumbnails = pm.response.json().items[0].snippet.thumbnails;",
+              "            const thumbnailKeys = [\"default\", \"medium\", \"high\", \"standard\", \"maxres\"];",
+              "",
+              "            thumbnailKeys.forEach((key) => {",
+              "                pm.test(`Test '${key}' thumbnail`, function () {",
+              "                    const thumbnail = thumbnails[key];",
+              "                    // Note:",
+              "                    // '^https?:\\/\\/': match: \"http://\" or \"https://\" at the begining",
+              "                    // '[^\\s/$.?#]': match any character except whitespace, \"/\", \"$\", \".\", \"?\", and \"#\"",
+              "                    // '.[^\\s]*$': match any character except whitespace, zero or more times, until the end of the string",
+              "                    pm.expect(thumbnail).to.have.property(\"url\").that.matches(/^https?:\\/\\/[^\\s/$.?#].[^\\s]*$/);",
+              "                    pm.expect(thumbnail).to.have.property(\"width\").to.be.a(\"number\");",
+              "                    pm.expect(thumbnail).to.have.property(\"height\").to.be.a(\"number\");",
+              "                });",
+              "            });",
+              "            pm.expect(snippet).to.have.property(\"channelTitle\").and.to.be.a(\"string\"); // no special rules",
+              "            pm.expect(snippet.categoryId).to.be.a(\"string\").and.to.satisfy((value) => {",
+              "                const categoryId = parseInt(value);",
+              "                return categoryId >= 1 && categoryId <= 43;",
+              "            });",
+              "            pm.expect(snippet).to.have.property(\"liveBroadcastContent\").to.be.oneOf([\"upcoming\", \"live\", \"none\"]);",
+              "            pm.expect(snippet).to.have.property(\"localized\").and.to.be.an(\"object\");",
+              "            pm.expect(snippet.localized).to.have.property(\"title\").and.to.be.a(\"string\");",
+              "            pm.expect(snippet.localized).to.have.property(\"description\").and.to.be.a(\"string\");",
+              "        }",
+              "",
+              "        // Assert the contentDetails object",
+              "        const contentDetails = item.contentDetails;",
+              "        if (contentDetails) {",
+              "            pm.expect(contentDetails).to.be.an(\"object\");",
+              "            pm.expect(contentDetails).to.have.property(\"duration\").and.to.be.a(\"string\");",
+              "            pm.expect(contentDetails).to.have.property(\"dimension\").and.to.be.a(\"string\").to.be.oneOf([\"2d\", \"3d\"]);",
+              "            pm.expect(contentDetails).to.have.property(\"definition\").to.be.oneOf([\"sd\", \"hd\", \"fhd\", \"uhd\"]);",
+              "            pm.expect(contentDetails).to.have.property(\"caption\").and.to.be.a(\"string\");",
+              "            pm.expect(contentDetails).to.have.property(\"licensedContent\").and.to.be.a(\"boolean\");",
+              "            pm.expect(contentDetails).to.have.property(\"contentRating\").and.to.be.an(\"object\");",
+              "            pm.expect(contentDetails).to.have.property(\"projection\").to.be.oneOf([\"rectangular\", \"360\", \"3d\", \"cubemap\", \"equiangular\", \"mesh\"]);",
+              "        }",
+              "",
+              "        // Assert the status object",
+              "        const status = item.status;",
+              "        if (status) {",
+              "            pm.expect(status).to.be.an(\"object\");",
+              "            pm.expect(status).to.have.property(\"uploadStatus\").to.be.oneOf([\"uploaded\", \"processed\", \"failed\", \"rejected\", \"deleted\"]);",
+              "            pm.expect(status).to.have.property(\"privacyStatus\").to.be.oneOf([\"public\", \"private\", \"unlisted\", \"scheduled\", \"failed\"]);",
+              "            pm.expect(status).to.have.property(\"license\").to.be.oneOf([\"youtube\", \"creativeCommon\", \"standardYoutube\"]);",
+              "            pm.expect(status).to.have.property(\"embeddable\").and.to.be.a(\"boolean\");",
+              "            pm.expect(status).to.have.property(\"publicStatsViewable\").and.to.be.a(\"boolean\");",
+              "            pm.expect(status).to.have.property(\"madeForKids\").and.to.be.a(\"boolean\");",
+              "        }",
+              "",
+              "        // Assert the player object",
+              "        const player = item.player;",
+              "        if (player) {",
+              "            pm.expect(player).to.be.an(\"object\");",
+              "            pm.expect(player).to.have.property(\"embedHtml\").and.to.be.a(\"string\");",
+              "        }",
+              "",
+              "        // Assert the pageInfo object",
+              "        const pageInfo = responseData.pageInfo;",
+              "        if (pageInfo) {",
+              "            pm.expect(pageInfo).to.be.an(\"object\");",
+              "            pm.expect(pageInfo).to.have.property(\"totalResults\").and.to.be.a(\"number\");",
+              "            pm.expect(pageInfo).to.have.property(\"resultsPerPage\").and.to.be.a(\"number\");",
+              "        }",
+              "    }",
+              "});",
+              "",
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{bearerToken}}",
+            "type": "default"
+          }
+        ],
+        "url": {
+          "raw": "https://www.googleapis.com/youtube/v3/videos?part=snippet,status,id,contentDetails,status,player&id={{foundedVideoId}}&type=video",
+          "protocol": "https",
+          "host": ["www", "googleapis", "com"],
+          "path": ["youtube", "v3", "videos"],
+          "query": [
+            {
+              "key": "key",
+              "value": "{{key}}",
+              "disabled": true
+            },
+            {
+              "key": "part",
+              "value": "snippet,status,id,contentDetails,status,player"
+            },
+            {
+              "key": "id",
+              "value": "{{foundedVideoId}}"
+            },
+            {
+              "key": "type",
+              "value": "video"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get video rating",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Validate response data\", function () {",
+              "    const responseData = pm.response.json();",
+              "",
+              "    pm.expect(responseData).to.have.property(\"kind\").and.eql(\"youtube#videoGetRatingResponse\");",
+              "    pm.expect(responseData).to.have.property(\"etag\");",
+              "",
+              "    const items = responseData.items;",
+              "    pm.expect(items).to.be.an(\"array\");",
+              "",
+              "    const item = items[0];",
+              "    pm.expect(item).to.be.an(\"object\");",
+              "",
+              "    if (item.length) {",
+              "        // Check that founded video exist in search result",
+              "        pm.expect(items.some(item => item.videoId === pm.environment.get(\"foundedVideoId\"))).to.be.true;",
+              "        pm.expect(item).to.have.property(\"videoId\").and.be.a(\"string\");",
+              "        pm.expect(item).to.have.property(\"rating\").and.be.a(\"string\");",
+              "    }",
+              "});",
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{bearerToken}}",
+            "type": "default"
+          }
+        ],
+        "url": {
+          "raw": "https://www.googleapis.com/youtube/v3/videos/getRating?id={{foundedVideoId}}",
+          "protocol": "https",
+          "host": ["www", "googleapis", "com"],
+          "path": ["youtube", "v3", "videos", "getRating"],
+          "query": [
+            {
+              "key": "id",
+              "value": "{{foundedVideoId}}"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Like video",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 204\", function () {",
+              "    pm.response.to.have.status(204);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{bearerToken}}",
+            "type": "default"
+          }
+        ],
+        "url": {
+          "raw": "https://www.googleapis.com/youtube/v3/videos/rate?id={{foundedVideoId}}&rating=like",
+          "protocol": "https",
+          "host": ["www", "googleapis", "com"],
+          "path": ["youtube", "v3", "videos", "rate"],
+          "query": [
+            {
+              "key": "id",
+              "value": "{{foundedVideoId}}"
+            },
+            {
+              "key": "rating",
+              "value": "like"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Dislike video",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 204\", function () {",
+              "    pm.response.to.have.status(204);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{bearerToken}}",
+            "type": "default"
+          }
+        ],
+        "url": {
+          "raw": "https://www.googleapis.com/youtube/v3/videos/rate?id={{foundedVideoId}}&rating=dislike",
+          "protocol": "https",
+          "host": ["www", "googleapis", "com"],
+          "path": ["youtube", "v3", "videos", "rate"],
+          "query": [
+            {
+              "key": "id",
+              "value": "{{foundedVideoId}}"
+            },
+            {
+              "key": "rating",
+              "value": "dislike"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create a top comment",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Validate response data\", function () {",
+              "    const responseData = pm.response.json();",
+              "",
+              "    // Set environment variable for topLevelCommentId",
+              "    pm.environment.set(\"topLevelCommentId\", responseData.snippet.topLevelComment.id);",
+              "",
+              "    pm.expect(responseData).to.have.property(\"kind\").and.eql(\"youtube#commentThread\");",
+              "    pm.expect(typeof responseData.etag).to.eql(\"string\");",
+              "    pm.expect(typeof responseData.id).to.eql(\"string\");",
+              "",
+              "    const snippet = responseData.snippet;",
+              "    if (snippet) {",
+              "        pm.expect(snippet).to.be.an(\"object\");",
+              "        pm.expect(snippet.channelId).to.equal(pm.environment.get(\"foundedChannelId\"));",
+              "        pm.expect(snippet.videoId).to.eql(pm.environment.get(\"foundedVideoId\"));",
+              "",
+              "        const topLevelComment = snippet.topLevelComment;",
+              "        pm.expect(topLevelComment).to.be.an(\"object\");",
+              "",
+              "        pm.expect(typeof topLevelComment.kind).to.eql(\"string\");",
+              "        pm.expect(typeof topLevelComment.etag).to.eql(\"string\");",
+              "        pm.expect(typeof topLevelComment.id).to.eql(\"string\");",
+              "        pm.expect(typeof topLevelComment.snippet).to.eql(\"object\");",
+              "",
+              "        const commentSnippet = topLevelComment.snippet;",
+              "        pm.expect(commentSnippet).to.be.an(\"object\");",
+              "",
+              "        pm.expect(typeof commentSnippet.channelId).to.eql(\"string\");",
+              "        pm.expect(typeof commentSnippet.videoId).to.eql(\"string\");",
+              "        pm.expect(typeof commentSnippet.textDisplay).to.eql(\"string\");",
+              "        pm.expect(typeof commentSnippet.textOriginal).to.eql(\"string\");",
+              "        pm.expect(typeof commentSnippet.authorDisplayName).to.eql(\"string\");",
+              "        pm.expect(typeof commentSnippet.authorProfileImageUrl).to.eql(\"string\");",
+              "        pm.expect(typeof commentSnippet.authorChannelUrl).to.eql(\"string\");",
+              "        pm.expect(commentSnippet.authorChannelId).to.be.an(\"object\");",
+              "        pm.expect(typeof commentSnippet.canRate).to.eql(\"boolean\");",
+              "        pm.expect(typeof commentSnippet.viewerRating).to.eql(\"string\");",
+              "        pm.expect(typeof commentSnippet.likeCount).to.eql(\"number\");",
+              "        pm.expect(typeof commentSnippet.publishedAt).to.eql(\"string\");",
+              "        pm.expect(typeof commentSnippet.updatedAt).to.eql(\"string\");",
+              "    }",
+              "",
+              "    pm.expect(typeof responseData.snippet.canReply).to.eql(\"boolean\");",
+              "    pm.expect(typeof responseData.snippet.totalReplyCount).to.eql(\"number\");",
+              "    pm.expect(typeof responseData.snippet.isPublic).to.eql(\"boolean\");",
+              "});",
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{bearerToken}}",
+            "type": "default"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"snippet\": {\n        \"videoId\": \"{{foundedVideoId}}\",\n         \"topLevelComment\": {\n           \"snippet\": {\n             \"textOriginal\": \"{{topLevelCommentText}}\"\n           } \n      }\n    }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://www.googleapis.com/youtube/v3/commentThreads?part=snippet",
+          "protocol": "https",
+          "host": ["www", "googleapis", "com"],
+          "path": ["youtube", "v3", "commentThreads"],
+          "query": [
+            {
+              "key": "part",
+              "value": "snippet"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get user comment threads for video",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response Validation', () => {",
+              "    // Notes:",
+              "    // /^[\\w\\-]+$/ ensures that a string consists of only alphanumeric characters or hyphens and does not contain any other special characters or whitespace.",
+              "    // /^[\\w.-]+$/ regex also allow . symbol",
+              "    const response = pm.response.json();",
+              "",
+              "    // Check if any of the topLevelComment has the expected id",
+              "    const topLevelComments = response.items.map(item => item.snippet.topLevelComment);",
+              "    pm.expect(topLevelComments.some(comment => comment.id === \"UgxnJiPUseH8oO1T34R4AaABAg\")).to.be.true;",
+              "",
+              "    pm.expect(response).to.have.property('kind').and.to.be.a('string').and.equal('youtube#commentThreadListResponse');",
+              "    pm.expect(response).to.have.property('etag').and.to.be.a('string').and.match(/^[\\w\\-]+$/); ",
+              "    pm.expect(response).to.have.property('pageInfo').that.is.an('object');",
+              "    pm.expect(response.pageInfo).to.have.property('totalResults').and.to.be.a('number');",
+              "    pm.expect(response.pageInfo).to.have.property('resultsPerPage').and.to.be.a('number');",
+              "",
+              "    // Assert the items array",
+              "    const items = response.items;",
+              "    pm.expect(items).to.be.an('array');",
+              "    for (const item of items) {",
+              "        pm.expect(item).to.have.property('kind').and.to.be.a('string').and.equal('youtube#commentThread');",
+              "        pm.expect(item).to.have.property('etag').and.to.be.a('string').and.match(/^[\\w\\-]+$/); ",
+              "        pm.expect(item).to.have.property('id').and.to.be.a('string').and.match(/^[\\w\\-]+$/); ",
+              "",
+              "        // Assert the snippet object",
+              "        const snippet = item.snippet;",
+              "        if (snippet) {",
+              "            const snippet = item.snippet;",
+              "            pm.expect(snippet).to.have.property('videoId').and.to.be.a('string').and.match(/^[\\w\\-]+$/); ",
+              "            pm.expect(snippet).to.have.property('topLevelComment').that.is.an('object');",
+              "            pm.expect(snippet).to.have.property('canReply').and.to.be.a('boolean').and.equal(true);",
+              "            pm.expect(snippet).to.have.property('totalReplyCount').and.to.be.a('number');",
+              "            pm.expect(snippet).to.have.property('isPublic').and.to.be.a('boolean').and.equal(true);",
+              "",
+              "            const topLevelComment = snippet.topLevelComment;",
+              "            pm.expect(topLevelComment).to.have.property('kind').and.to.be.a('string').and.equal('youtube#comment');",
+              "            pm.expect(topLevelComment).to.have.property('etag').and.to.be.a('string').and.match(/^[\\w\\-]+$/); ",
+              "            pm.expect(topLevelComment).to.have.property('id').and.to.be.a('string').and.match(/^[\\w\\-]+$/); ",
+              "            pm.expect(topLevelComment).to.have.property('snippet').that.is.an('object');",
+              "            pm.expect(topLevelComment.snippet).to.have.property('videoId').and.to.be.a('string').and.match(/^[\\w\\-]+$/); ",
+              "            pm.expect(topLevelComment.snippet).to.have.property('textDisplay').and.to.be.a('string');",
+              "            pm.expect(topLevelComment.snippet).to.have.property('textOriginal').and.to.be.a('string');",
+              "            pm.expect(topLevelComment.snippet).to.have.property('authorDisplayName').and.to.be.a('string');",
+              "            pm.expect(topLevelComment.snippet).to.have.property('authorProfileImageUrl').and.to.be.a('string').and.match(/^https?:\\/\\/.+$/); ",
+              "            pm.expect(topLevelComment.snippet).to.have.property('authorChannelUrl').and.to.be.a('string').and.match(/^https?:\\/\\/.+$/); ",
+              "            pm.expect(topLevelComment.snippet).to.have.property('authorChannelId').that.is.an('object');",
+              "            pm.expect(topLevelComment.snippet.authorChannelId).to.have.property('value').and.to.be.a('string').and.match(/^[\\w\\-]+$/); ",
+              "            pm.expect(topLevelComment.snippet).to.have.property('canRate').and.to.be.a('boolean');",
+              "            pm.expect(topLevelComment.snippet).to.have.property('viewerRating').and.to.be.a('string');",
+              "            pm.expect(topLevelComment.snippet).to.have.property('likeCount').and.to.be.a('number');",
+              "            pm.expect(topLevelComment.snippet).to.have.property('publishedAt').and.to.be.a('string').and.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$/); ",
+              "            pm.expect(topLevelComment.snippet).to.have.property('updatedAt').and.to.be.a('string').and.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$/); ",
+              "        }",
+              "",
+              "        // Assert the replies object",
+              "        const replies = item.replies;",
+              "        if (replies) {",
+              "            pm.expect(replies).to.have.property('comments').that.is.an('array');",
+              "",
+              "            // Assert the replies comments object",
+              "            const replyComments = replies.comments;",
+              "            for (const replyComment of replyComments) {",
+              "                pm.expect(replyComment).to.have.property('kind').and.to.be.a('string').and.equal('youtube#comment');",
+              "                pm.expect(replyComment).to.have.property('etag').and.to.be.a('string').and.match(/^[\\w\\-]+$/); ",
+              "                pm.expect(replyComment).to.have.property('id').and.to.be.a('string').and.match(/^[\\w.-]+$/); // regex also allow .",
+              "                pm.expect(replyComment).to.have.property('snippet').that.is.an('object');",
+              "                pm.expect(replyComment.snippet).to.have.property('videoId').and.to.be.a('string').and.match(/^[\\w\\-]+$/);",
+              "                pm.expect(replyComment.snippet).to.have.property('textDisplay').and.to.be.a('string');",
+              "                pm.expect(replyComment.snippet).to.have.property('textOriginal').and.to.be.a('string');",
+              "                pm.expect(replyComment.snippet).to.have.property('parentId').and.to.be.a('string').and.match(/^[\\w\\-]+$/); ",
+              "                pm.expect(replyComment.snippet).to.have.property('authorDisplayName').and.to.be.a('string');",
+              "                pm.expect(replyComment.snippet).to.have.property('authorProfileImageUrl').and.to.be.a('string').and.match(/^https?:\\/\\/.+$/);",
+              "                pm.expect(replyComment.snippet).to.have.property('authorChannelUrl').and.to.be.a('string').and.match(/^https?:\\/\\/.+$/); ",
+              "                pm.expect(replyComment.snippet).to.have.property('authorChannelId').that.is.an('object');",
+              "                pm.expect(replyComment.snippet.authorChannelId).to.have.property('value').and.to.be.a('string').and.match(/^[\\w\\-]+$/); ",
+              "                pm.expect(replyComment.snippet).to.have.property('canRate').and.to.be.a('boolean');",
+              "                pm.expect(replyComment.snippet).to.have.property('viewerRating').and.to.be.a('string');",
+              "                pm.expect(replyComment.snippet).to.have.property('likeCount').and.to.be.a('number');",
+              "                pm.expect(replyComment.snippet).to.have.property('publishedAt').and.to.be.a('string').and.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$/); ",
+              "                pm.expect(replyComment.snippet).to.have.property('updatedAt').and.to.be.a('string').and.match(/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$/); ",
+              "            }",
+              "        }",
+              "    }",
+              "});",
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{bearerToken}}",
+            "type": "default"
+          }
+        ],
+        "url": {
+          "raw": "https://www.googleapis.com/youtube/v3/commentThreads?part=id,replies,snippet&videoId={{foundedVideoId}}&key={{key}}",
+          "protocol": "https",
+          "host": ["www", "googleapis", "com"],
+          "path": ["youtube", "v3", "commentThreads"],
+          "query": [
+            {
+              "key": "part",
+              "value": "id,replies,snippet"
+            },
+            {
+              "key": "videoId",
+              "value": "{{foundedVideoId}}"
+            },
+            {
+              "key": "key",
+              "value": "{{key}}"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create sub comment",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Validate response data and types\", function () {",
+              "    const responseData = pm.response.json();",
+              "",
+              "    pm.expect(responseData).to.have.property(\"kind\").and.eql(\"youtube#comment\");",
+              "    pm.expect(typeof responseData.etag).to.eql(\"string\");",
+              "    pm.expect(typeof responseData.id).to.eql(\"string\");",
+              "    pm.expect(responseData.id).to.include(\".\");",
+              "",
+              "    // Set subcommentId",
+              "    pm.environment.set(\"subCommentId\", responseData.id);",
+              "   ",
+              "    const snippet = responseData.snippet;",
+              "    if (snippet) {",
+              "        pm.expect(snippet).to.be.an(\"object\");",
+              "        pm.expect(snippet.textDisplay).to.equal(pm.environment.get(\"subCommentText\"));",
+              "        pm.expect(snippet.textOriginal).to.equal(pm.environment.get(\"subCommentText\"));",
+              "        pm.expect(snippet.parentId).to.equal(pm.environment.get(\"topLevelCommentId\"));",
+              "        pm.expect(typeof snippet.authorDisplayName).to.eql(\"string\");",
+              "        pm.expect(typeof snippet.authorProfileImageUrl).to.eql(\"string\");",
+              "        pm.expect(typeof snippet.authorChannelUrl).to.eql(\"string\");",
+              "        pm.expect(snippet.authorChannelId).to.be.an(\"object\");",
+              "        pm.expect(typeof snippet.canRate).to.eql(\"boolean\");",
+              "        pm.expect(typeof snippet.viewerRating).to.eql(\"string\");",
+              "        pm.expect(typeof snippet.likeCount).to.eql(\"number\");",
+              "        pm.expect(typeof snippet.publishedAt).to.eql(\"string\");",
+              "        pm.expect(typeof snippet.updatedAt).to.eql(\"string\");",
+              "    }",
+              "});",
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{bearerToken}}",
+            "type": "default"
+          },
+          {
+            "key": "part",
+            "value": "",
+            "type": "default",
+            "disabled": true
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"snippet\": {\n    \"parentId\": \"{{topLevelCommentId}}\",\n    \"textOriginal\": \"{{subCommentText}}\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://www.googleapis.com/youtube/v3/comments?part=snippet,id&videoId={{foundedVideoId}}",
+          "protocol": "https",
+          "host": ["www", "googleapis", "com"],
+          "path": ["youtube", "v3", "comments"],
+          "query": [
+            {
+              "key": "part",
+              "value": "snippet,id"
+            },
+            {
+              "key": "videoId",
+              "value": "{{foundedVideoId}}"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Read subcomments list",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Validate response data\", function () {",
+              "    const responseData = pm.response.json();",
+              "",
+              "    // Check if any of the item or topLevelComment have the expected id",
+              "    const itemsId = responseData.items.map(item => item.id);",
+              "    pm.expect(itemsId.some(item => item === pm.environment.get(\"subCommentId\"))).to.be.true;",
+              "    const topLevelComments = responseData.items.map(item => item.snippet.topLevelComment.id);",
+              "    pm.expect(topLevelComments.some(comment => comment === pm.environment.get(\"subCommentId\"))).to.be.true;",
+              "",
+              "    pm.expect(responseData).to.have.property(\"kind\").and.eql(\"youtube#commentThreadListResponse\");",
+              "    pm.expect(typeof responseData.etag).to.eql(\"string\");",
+              "",
+              "    const pageInfo = responseData.pageInfo;",
+              "    pm.expect(pageInfo).to.be.an(\"object\");",
+              "    pm.expect(pageInfo).to.have.property(\"totalResults\").and.to.be.a(\"number\");",
+              "    pm.expect(pageInfo).to.have.property(\"resultsPerPage\").and.to.be.a(\"number\");",
+              "",
+              "    const items = responseData.items;",
+              "    pm.expect(items).to.be.an(\"array\");",
+              "    pm.expect(items.length).to.be.at.least(1);",
+              "",
+              "    const firstItem = items[0];",
+              "    pm.expect(firstItem).to.have.property(\"kind\").and.eql(\"youtube#commentThread\");",
+              "    pm.expect(typeof firstItem.etag).to.eql(\"string\");",
+              "    pm.expect(typeof firstItem.id).to.eql(\"string\");",
+              "",
+              "    const snippet = firstItem.snippet;",
+              "    pm.expect(snippet).to.be.an(\"object\");",
+              "",
+              "    const topLevelComment = snippet.topLevelComment;",
+              "    pm.expect(topLevelComment).to.have.property(\"kind\").and.eql(\"youtube#comment\");",
+              "    pm.expect(typeof topLevelComment.etag).to.eql(\"string\");",
+              "    pm.expect(typeof topLevelComment.id).to.eql(\"string\");",
+              "",
+              "    const topLevelCommentSnippet = topLevelComment.snippet;",
+              "    pm.expect(topLevelCommentSnippet).to.be.an(\"object\");",
+              "    pm.expect(topLevelCommentSnippet).to.have.property(\"videoId\").and.to.eql(\"l7cnl8jsqCs\");",
+              "    pm.expect(topLevelCommentSnippet).to.have.property(\"textDisplay\").and.to.be.a(\"string\");",
+              "    pm.expect(topLevelCommentSnippet).to.have.property(\"textOriginal\").and.to.be.a(\"string\");",
+              "    pm.expect(topLevelCommentSnippet).to.have.property(\"parentId\").and.to.be.a(\"string\");",
+              "    pm.expect(topLevelCommentSnippet).to.have.property(\"authorDisplayName\").and.to.be.a(\"string\");",
+              "    pm.expect(topLevelCommentSnippet).to.have.property(\"authorProfileImageUrl\").and.to.be.a(\"string\");",
+              "    pm.expect(topLevelCommentSnippet).to.have.property(\"authorChannelUrl\").and.to.be.a(\"string\");",
+              "    pm.expect(topLevelCommentSnippet).to.have.property(\"authorChannelId\").and.to.be.an(\"object\");",
+              "    pm.expect(topLevelCommentSnippet).to.have.property(\"canRate\").and.to.be.a(\"boolean\");",
+              "    pm.expect(topLevelCommentSnippet).to.have.property(\"viewerRating\").and.to.be.a(\"string\");",
+              "    pm.expect(topLevelCommentSnippet).to.have.property(\"likeCount\").and.to.be.a(\"number\");",
+              "    pm.expect(topLevelCommentSnippet).to.have.property(\"publishedAt\").and.to.be.a(\"string\");",
+              "    pm.expect(topLevelCommentSnippet).to.have.property(\"updatedAt\").and.to.be.a(\"string\");",
+              "",
+              "    pm.expect(snippet).to.have.property(\"canReply\").and.to.be.a(\"boolean\");",
+              "    pm.expect(snippet).to.have.property(\"totalReplyCount\").and.to.be.a(\"number\");",
+              "    pm.expect(snippet).to.have.property(\"isPublic\").and.to.be.a(\"boolean\");",
+              "});",
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{bearerToken}}",
+            "type": "default"
+          }
+        ],
+        "url": {
+          "raw": "https://www.googleapis.com/youtube/v3/commentThreads?part=id,replies,snippet&id={{subCommentId}}",
+          "protocol": "https",
+          "host": ["www", "googleapis", "com"],
+          "path": ["youtube", "v3", "commentThreads"],
+          "query": [
+            {
+              "key": "part",
+              "value": "id,replies,snippet"
+            },
+            {
+              "key": "id",
+              "value": "{{subCommentId}}"
+            },
+            {
+              "key": "key",
+              "value": "{{key}}",
+              "disabled": true
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Update subcomment",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{bearerToken}}",
+            "type": "default"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"{{subCommentId}}\",\n  \"snippet\": {\n    \"textOriginal\": \"{{subCommentUpdatedText}}\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://www.googleapis.com/youtube/v3/comments?part=snippet",
+          "protocol": "https",
+          "host": ["www", "googleapis", "com"],
+          "path": ["youtube", "v3", "comments"],
+          "query": [
+            {
+              "key": "part",
+              "value": "snippet"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Delete subcomment",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{bearerToken}}",
+            "type": "default"
+          }
+        ],
+        "url": {
+          "raw": "https://www.googleapis.com/youtube/v3/comments?id={{subCommentId}}",
+          "protocol": "https",
+          "host": ["www", "googleapis", "com"],
+          "path": ["youtube", "v3", "comments"],
+          "query": [
+            {
+              "key": "id",
+              "value": "{{subCommentId}}"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Subscribe on channel",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Validate response data and types\", function () {",
+              "    const responseData = pm.response.json();",
+              "",
+              "    pm.expect(responseData).to.have.property(\"kind\").and.eql(\"youtube#subscription\");",
+              "    pm.expect(typeof responseData.etag).to.eql(\"string\");",
+              "    pm.expect(typeof responseData.id).to.eql(\"string\");",
+              "",
+              "    const snippet = responseData.snippet;",
+              "    pm.expect(snippet).to.be.an(\"object\");",
+              "    pm.expect(typeof snippet.publishedAt).to.eql(\"string\");",
+              "    pm.expect(typeof snippet.title).to.eql(\"string\");",
+              "    pm.expect(typeof snippet.description).to.eql(\"string\");",
+              "",
+              "    const resourceId = snippet.resourceId;",
+              "    pm.expect(resourceId).to.be.an(\"object\");",
+              "    pm.expect(resourceId).to.have.property(\"kind\").and.eql(\"youtube#channel\");",
+              "    pm.expect(resourceId.channelId).to.eql(pm.environment.get('foundedChannelId'));",
+              "",
+              "    pm.expect(typeof snippet.channelId).to.eql(\"string\");",
+              "",
+              "    pm.environment.set(\"subscritionCHannelId\", snippet.channelId);",
+              "",
+              "    const thumbnails = snippet.thumbnails;",
+              "    pm.expect(thumbnails).to.be.an(\"object\");",
+              "",
+              "    const defaultThumbnail = thumbnails.default;",
+              "    pm.expect(defaultThumbnail).to.be.an(\"object\");",
+              "    pm.expect(typeof defaultThumbnail.url).to.eql(\"string\");",
+              "",
+              "    const mediumThumbnail = thumbnails.medium;",
+              "    pm.expect(mediumThumbnail).to.be.an(\"object\");",
+              "    pm.expect(typeof mediumThumbnail.url).to.eql(\"string\");",
+              "",
+              "    const highThumbnail = thumbnails.high;",
+              "    pm.expect(highThumbnail).to.be.an(\"object\");",
+              "    pm.expect(typeof highThumbnail.url).to.eql(\"string\");",
+              "});",
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{bearerToken}}",
+            "type": "default"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"snippet\": {\n    \"resourceId\": {\n      \"kind\": \"youtube#channel\",\n      \"channelId\": \"{{foundedChannelId}}\"\n    }\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://www.googleapis.com/youtube/v3/subscriptions?part=snippet",
+          "protocol": "https",
+          "host": ["www", "googleapis", "com"],
+          "path": ["youtube", "v3", "subscriptions"],
+          "query": [
+            {
+              "key": "part",
+              "value": "snippet"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get channel subscription info",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const responseData = pm.response.json();",
+              "const items = responseData.items;",
+              "const foundedChannelId = pm.environment.get(\"foundedChannelId\");",
+              "",
+              "const subscribedChannel = items.find(item => item.snippet.resourceId.channelId === foundedChannelId);",
+              "",
+              "if (subscribedChannel) {",
+              "    pm.environment.set(\"subscribedChannelId\", subscribedChannel.id);",
+              "} else {",
+              "    pm.expect.fail(`Item with channelId \"${foundedChannelId}\" not found`);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{bearerToken}}",
+            "type": "default"
+          }
+        ],
+        "url": {
+          "raw": "https://www.googleapis.com/youtube/v3/subscriptions?part=contentDetails,id,snippet,subscriberSnippet&mine=true",
+          "protocol": "https",
+          "host": ["www", "googleapis", "com"],
+          "path": ["youtube", "v3", "subscriptions"],
+          "query": [
+            {
+              "key": "part",
+              "value": "contentDetails,id,snippet,subscriberSnippet"
+            },
+            {
+              "key": "mine",
+              "value": "true"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Unsubscribe from channel",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 204\", function () {",
+              "    pm.response.to.have.status(204);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{bearerToken}}",
+            "type": "default"
+          }
+        ],
+        "url": {
+          "raw": "https://www.googleapis.com/youtube/v3/subscriptions?id={{subscribedChannelId}}",
+          "protocol": "https",
+          "host": ["www", "googleapis", "com"],
+          "path": ["youtube", "v3", "subscriptions"],
+          "query": [
+            {
+              "key": "id",
+              "value": "{{subscribedChannelId}}"
+            }
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
