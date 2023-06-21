@@ -1,0 +1,4 @@
+Check youtube api testing homework
+See: https://github.com/domovou69/youtube-api-testing
+
+@vikt3, @maarsvin and @alinagoncark
